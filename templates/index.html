@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spatial Data Map</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        #map { height: 600px; width: 100%; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="p-8">
+        <h1 class="text-3xl font-bold mb-4">Peta Tempat Ibadah Bandar Lampung</h1>
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div id="map"></div>
+            <div class="mt-4">
+                <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    Zoom In
+                </button>
+                <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    Zoom Out
+                </button>
+                <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    Reset View
+                </button>
+
+                <div class="relative">
+                    <!-- Peta -->
+                    <div id="map"></div>
+                
+                    <!-- Tombol untuk membuka legenda -->
+                    <button id="legend-toggle" class="absolute top-4 right-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        Tampilkan Legenda
+                    </button>
+                
+                    <!-- Legenda -->
+                    <div id="legend" class="absolute top-16 right-4 bg-white shadow-md rounded-lg p-4 hidden">
+                        <h3 class="font-bold text-lg mb-2">Legenda</h3>
+                        <ul class="space-y-2">
+                            <li class="flex items-center">
+                                <span class="w-4 h-4 bg-blue-500 rounded-full mr-2"></span> Gereja
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-4 h-4 bg-red-500 rounded-full mr-2"></span> Kelenteng
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-4 h-4 bg-green-500 rounded-full mr-2"></span> Masjid
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-4 h-4 bg-purple-500 rounded-full mr-2"></span> Peribadatan/Sosial Lainnya
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-4 h-4 bg-orange-500 rounded-full mr-2"></span> Pura
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-4 h-4 bg-yellow-500 rounded-full mr-2"></span> Vihara
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-4 h-4 bg-gray-500 rounded-full mr-2"></span> Lainnya
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+    <script>
+        // Fungsi untuk membuka dan menutup legenda
+        const legendToggle = document.getElementById('legend-toggle');
+        const legend = document.getElementById('legend');
+    
+        legendToggle.addEventListener('click', () => {
+            if (legend.classList.contains('hidden')) {
+                legend.classList.remove('hidden');
+                legendToggle.textContent = 'Sembunyikan Legenda';
+            } else {
+                legend.classList.add('hidden');
+                legendToggle.textContent = 'Tampilkan Legenda';
+            }
+        });
+    </script>
+    
+    <script>
+        // Access GeoJSON data passed from Flask
+        var pointsData = {{ points | safe }};
+    
+        // Initialize the map centered on Indonesia
+        var map = L.map('map').setView([-2.5489, 118.0149], 5);
+    
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+    
+        // Function to determine marker color based on remark
+        function getColor(remark) {
+            switch (remark) {
+                case "Gereja": return "blue";
+                case "Kelenteng": return "red";
+                case "Masjid": return "green";
+                case "Peribadatan/Sosial Lainnya": return "purple";
+                case "Pura": return "orange";
+                case "Vihara": return "yellow";
+                default: return "gray"; // Default color for unknown remarks
+            }
+        }
+    
+        // Add GeoJSON points to the map
+        if (pointsData && pointsData.features) {
+            L.geoJSON(pointsData, {
+                pointToLayer: function(feature, latlng) {
+                    // Determine color based on the remark property
+                    var color = getColor(feature.properties.remark);
+    
+                    // Create a circle marker with the appropriate color
+                    return L.circleMarker(latlng, {
+                        radius: 8,
+                        fillColor: color,
+                        color: "#000", // Border color
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+                },
+                onEachFeature: function(feature, layer) {
+                    if (feature.properties) {
+                        // Add popup showing the name and remark of the point
+                        var popupContent = 
+                            "<strong>Nama:</strong> " + feature.properties.name + "<br>" +
+                            "<strong>Jenis:</strong> " + feature.properties.remark;
+                        layer.bindPopup(popupContent);
+                    }
+                }
+            }).addTo(map);
+        }
+    
+        // Add event listeners for buttons
+        document.querySelectorAll('.bg-blue-500').forEach(button => {
+            button.addEventListener('click', (event) => {
+                if (event.target.textContent === 'Zoom In') {
+                    map.zoomIn();
+                } else if (event.target.textContent === 'Zoom Out') {
+                    map.zoomOut();
+                } else {
+                    map.setView([-2.5489, 118.0149], 5);
+                }
+            });
+        });
+    </script>
+    
+</body>
+</html>
