@@ -9,94 +9,60 @@
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <style>
         #map { height: 600px; width: 100%; }
+        .legend-container {
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .legend-container select {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .legend-container ul {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        .legend-container li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .legend-container li span {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            margin-right: 5px;
+            border-radius: 50%;
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="p-8">
-        <h1 class="text-3xl font-bold mb-4">Peta Tempat Ibadah Bandar Lampung</h1>
+        <h1 class="text-3xl font-bold mb-4">Spatial Data with Flask and PostGIS</h1>
         <div class="bg-white rounded-lg shadow-md p-6">
             <div id="map"></div>
-            <div class="mt-4">
-                <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    Zoom In
-                </button>
-                <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    Zoom Out
-                </button>
-                <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    Reset View
-                </button>
-
-                <div class="relative">
-                    <!-- Peta -->
-                    <div id="map"></div>
-                
-                    <!-- Tombol untuk membuka legenda -->
-                    <button id="legend-toggle" class="absolute top-4 right-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        Tampilkan Legenda
-                    </button>
-                
-                    <!-- Legenda -->
-                    <div id="legend" class="absolute top-16 right-4 bg-white shadow-md rounded-lg p-4 hidden">
-                        <h3 class="font-bold text-lg mb-2">Legenda</h3>
-                        <ul class="space-y-2">
-                            <li class="flex items-center">
-                                <span class="w-4 h-4 bg-blue-500 rounded-full mr-2"></span> Gereja
-                            </li>
-                            <li class="flex items-center">
-                                <span class="w-4 h-4 bg-red-500 rounded-full mr-2"></span> Kelenteng
-                            </li>
-                            <li class="flex items-center">
-                                <span class="w-4 h-4 bg-green-500 rounded-full mr-2"></span> Masjid
-                            </li>
-                            <li class="flex items-center">
-                                <span class="w-4 h-4 bg-purple-500 rounded-full mr-2"></span> Peribadatan/Sosial Lainnya
-                            </li>
-                            <li class="flex items-center">
-                                <span class="w-4 h-4 bg-orange-500 rounded-full mr-2"></span> Pura
-                            </li>
-                            <li class="flex items-center">
-                                <span class="w-4 h-4 bg-yellow-500 rounded-full mr-2"></span> Vihara
-                            </li>
-                            <li class="flex items-center">
-                                <span class="w-4 h-4 bg-gray-500 rounded-full mr-2"></span> Lainnya
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
-    
-    
+
     <script>
-        // Fungsi untuk membuka dan menutup legenda
-        const legendToggle = document.getElementById('legend-toggle');
-        const legend = document.getElementById('legend');
-    
-        legendToggle.addEventListener('click', () => {
-            if (legend.classList.contains('hidden')) {
-                legend.classList.remove('hidden');
-                legendToggle.textContent = 'Sembunyikan Legenda';
-            } else {
-                legend.classList.add('hidden');
-                legendToggle.textContent = 'Tampilkan Legenda';
-            }
-        });
-    </script>
-    
-    <script>
-        // Access GeoJSON data passed from Flask
-        var pointsData = {{ points | safe }};
-    
-        // Initialize the map centered on Indonesia
+        // Initialize the map
         var map = L.map('map').setView([-2.5489, 118.0149], 5);
-    
+
         // Add OpenStreetMap tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-    
+
+        // GeoJSON data (mock data for demonstration purposes)
+        var pointsData = {{ points | safe }};
+
         // Function to determine marker color based on remark
         function getColor(remark) {
             switch (remark) {
@@ -109,49 +75,71 @@
                 default: return "gray"; // Default color for unknown remarks
             }
         }
-    
+
         // Add GeoJSON points to the map
-        if (pointsData && pointsData.features) {
-            L.geoJSON(pointsData, {
-                pointToLayer: function(feature, latlng) {
-                    // Determine color based on the remark property
-                    var color = getColor(feature.properties.remark);
-    
-                    // Create a circle marker with the appropriate color
-                    return L.circleMarker(latlng, {
-                        radius: 8,
-                        fillColor: color,
-                        color: "#000", // Border color
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    });
-                },
-                onEachFeature: function(feature, layer) {
-                    if (feature.properties) {
-                        // Add popup showing the name and remark of the point
-                        var popupContent = 
-                            "<strong>Nama:</strong> " + feature.properties.name + "<br>" +
-                            "<strong>Jenis:</strong> " + feature.properties.remark;
-                        layer.bindPopup(popupContent);
-                    }
-                }
-            }).addTo(map);
-        }
-    
-        // Add event listeners for buttons
-        document.querySelectorAll('.bg-blue-500').forEach(button => {
-            button.addEventListener('click', (event) => {
-                if (event.target.textContent === 'Zoom In') {
-                    map.zoomIn();
-                } else if (event.target.textContent === 'Zoom Out') {
-                    map.zoomOut();
-                } else {
-                    map.setView([-2.5489, 118.0149], 5);
-                }
-            });
+        var geoJsonLayer = L.geoJSON(pointsData, {
+            pointToLayer: function(feature, latlng) {
+                var color = getColor(feature.properties.remark);
+                return L.circleMarker(latlng, {
+                    radius: 8,
+                    fillColor: color,
+                    color: "#000",
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+            },
+            onEachFeature: function(feature, layer) {
+                var popupContent = `<strong>Nama:</strong> ${feature.properties.name}<br><strong>Jenis:</strong> ${feature.properties.remark}`;
+                layer.bindPopup(popupContent);
+            }
+        }).addTo(map);
+
+        // Filter and legend control
+        var legendControl = L.control({ position: 'bottomleft' });
+
+        legendControl.onAdd = function(map) {
+            var div = L.DomUtil.create('div', 'legend-container');
+            div.innerHTML = `
+                <select id="filter">
+                    <option value="">Semua</option>
+                    <option value="Gereja">Gereja</option>
+                    <option value="Kelenteng">Kelenteng</option>
+                    <option value="Masjid">Masjid</option>
+                    <option value="Peribadatan/Sosial Lainnya">Peribadatan/Sosial Lainnya</option>
+                    <option value="Pura">Pura</option>
+                    <option value="Vihara">Vihara</option>
+                </select>
+                <span id="total">Total: 0</span>
+                <ul>
+                    <li><span style="background: blue;"></span> Gereja</li>
+                    <li><span style="background: red;"></span> Kelenteng</li>
+                    <li><span style="background: green;"></span> Masjid</li>
+                    <li><span style="background: purple;"></span> Peribadatan/Sosial Lainnya</li>
+                    <li><span style="background: orange;"></span> Pura</li>
+                    <li><span style="background: yellow;"></span> Vihara</li>
+                </ul>
+            `;
+
+            L.DomEvent.disableClickPropagation(div);
+            return div;
+        };
+
+        legendControl.addTo(map);
+
+        // Filter functionality
+        document.getElementById('filter').addEventListener('change', function() {
+            var selectedValue = this.value;
+            geoJsonLayer.clearLayers();
+
+            var filteredData = selectedValue
+                ? pointsData.features.filter(f => f.properties.remark === selectedValue)
+                : pointsData.features;
+
+            document.getElementById('total').textContent = `Total: ${filteredData.length}`;
+
+            geoJsonLayer.addData({ type: 'FeatureCollection', features: filteredData });
         });
     </script>
-    
 </body>
 </html>
